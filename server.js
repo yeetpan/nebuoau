@@ -4,6 +4,7 @@ const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const session = require('express-session');
 const bodyParser = require('body-parser'); // Import body-parser
+const MongoClient = require('mongodb').MongoClient;
 
 const app = express();
 
@@ -14,7 +15,7 @@ app.use(bodyParser.json());
 
 
 // Connect to MongoDB (replace with your MongoDB connection string)
-mongoose.connect('mongodb+srv://sai:nebulabhai@cluster0.l9c5xyp.mongodb.net/test?retryWrites=true&w=majority', { useNewUrlParser: true, useUnifiedTopology: true });
+mongoose.connect('mongodb+srv://admin:password1212@nebuladb.d7wj5do.mongodb.net/test?retryWrites=true&w=majority', { useNewUrlParser: true, useUnifiedTopology: true });
 
 // Define User Schema
 const User = mongoose.model('User', {
@@ -126,20 +127,35 @@ app.get('/signup-details', isAuthenticated, (req, res) => {
 
 // Handle the submission of the additional details form
 app.post('/submit-details', isAuthenticated, (req, res) => {
-  const { clubName, clubDetails } = req.body;
-
-  // Update the user's information with the additional details
-  User.findByIdAndUpdate(req.user._id, { additionalInfo: { clubName, clubDetails } }, { new: true })
-    .then(user => {
-      // Redirect to the appropriate page based on the user's role
-      const redirectPage = user.role === 'admin' ? '/admin' : '/user';
-      res.redirect(redirectPage);
-    })
-    .catch(err => {
-      console.error(err);
-      res.redirect('/');
-    });
-});
+  const { clubName, clubDetails, role } = req.body;
+ 
+  // Check if the user's role has changed
+  if (req.user.role !== role) {
+     // Update the user's role
+     User.findByIdAndUpdate(req.user._id, { role }, { new: true })
+       .then(user => {
+         // Redirect to the appropriate page based on the user's role
+         const redirectPage = user.role === 'admin' ? '/admin' : '/user';
+         res.redirect(redirectPage);
+       })
+       .catch(err => {
+         console.error(err);
+         res.redirect('/');
+       });
+  } else {
+     // Update the user's information with the additional details
+     User.findByIdAndUpdate(req.user._id, { additionalInfo: { clubName, clubDetails } }, { new: true })
+       .then(user => {
+         // Redirect to the appropriate page based on the user's role
+         const redirectPage = user.role === 'admin' ? '/admin' : '/user';
+         res.redirect(redirectPage);
+       })
+       .catch(err => {
+         console.error(err);
+         res.redirect('/');
+       });
+  }
+ });
 
 app.get('/login', (req, res) => {
   // Redirect to admin or user page based on user role
@@ -180,12 +196,23 @@ function isAdmin(req, res, next) {
   res.redirect('/');
 }
 // Function to determine if the user is an admin based on email
-function isUserAdmin(email) {
-  // List of Gmail addresses designated as admin accounts
-  const adminEmails = ['admin1@gmail.com', 'admin2@gmail.com'];
-
+async function isUserAdmin(email) {
+  // Connect to the database
+  const client = new MongoClient('mongodb+srv://admin:password1212@nebuladb.d7wj5do.mongodb.net/test?retryWrites=true&w=majority', { useNewUrlParser: true, useUnifiedTopology: true });
+  await client.connect();
+ 
+  // Make the appropriate DB calls
+  const adminUsers = await client.db("test").collection("users").find({ "role": "admin" }).toArray();
+ 
+  // Convert the array of admin user objects to an array of emails
+  const adminEmails = adminUsers.map(user => user.email);
+ 
+  // Close the database connection
+  await client.close();
+ 
+  // Check if the given email is in the list of admin emails
   return adminEmails.includes(email);
-}
+ }
 
 // Start the server
 const PORT = 3000;
