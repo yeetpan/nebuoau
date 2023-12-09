@@ -15,7 +15,7 @@ app.use(bodyParser.json());
 
 
 // Connect to MongoDB (replace with your MongoDB connection string)
-mongoose.connect('mongodb+srv://admin:password1212@nebuladb.d7wj5do.mongodb.net/test?retryWrites=true&w=majority', { useNewUrlParser: true, useUnifiedTopology: true });
+mongoose.connect('mongodb+srv://sai:nebula123@cluster0.l9c5xyp.mongodb.net/test?retryWrites=true&w=majority', { useNewUrlParser: true, useUnifiedTopology: true });
 
 // Define User Schema
 const User = mongoose.model('User', {
